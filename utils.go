@@ -3,6 +3,7 @@ package main
 import(
 	"log"
 	"time"
+	"bytes"
 	"io/ioutil"
 	"regexp"
 	"strings"
@@ -15,6 +16,13 @@ func isURL(e string) bool {
     return urlRegex.MatchString(e)
 }
 
+func getHostname(newUrl string) string {
+    url, err := url.Parse(newUrl)
+    if err != nil {
+        log.Fatal(err)
+    }
+    return strings.TrimPrefix(url.Hostname(), "www.")
+}
 
 func httpReq(method string, reqURL string, body []string, headers []string) (string, string) {
 	//Generic GET request to Open Weather Map API
@@ -25,21 +33,26 @@ func httpReq(method string, reqURL string, body []string, headers []string) (str
 	//fields
 	data := url.Values{}
 	for _, field := range body {
-		kv := strings.Split(field, ",")
+		kv := strings.Split(field, "=")
 		//must be a key value pair
 		if len(kv) == 2 {
-			data.Set(kv[0], kv[1])
+			data.Add(kv[0], kv[1])
 		}
 	}
 	
-	req, err := http.NewRequest("GET", reqURL, strings.NewReader(data.Encode()))
+	//Body
+	bytesObj := []byte(data.Encode())
+	newBody := bytes.NewBuffer(bytesObj)
+	
+	req, err := http.NewRequest(method, reqURL, newBody)
 	if err != nil {
 		log.Fatal(err)
 	}
 	
+	
 	//headers
 	for _, header := range headers {
-		kv := strings.Split(header, ",")
+		kv := strings.Split(header, "=")
 		//must be a key value pair
 		if len(kv) == 2 {
 			req.Header.Add(kv[0], kv[1])
@@ -48,7 +61,6 @@ func httpReq(method string, reqURL string, body []string, headers []string) (str
 	
 	
 	resp, err := client.Do(req)
-	
 	if err != nil {
 		log.Fatal(err)
 	}

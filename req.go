@@ -1,6 +1,7 @@
 package main
 
 import(
+	"log"
 	"errors"
 )
 
@@ -15,33 +16,35 @@ type Request struct {
 }
 
 type Response struct {
-	state string
+	status string
 	body string
 }
 
 func NewRequest() *Request {
 	return &Request{
+		headers:[]string{"Content-Type=application/x-www-form-urlencoded"},
 		response:&Response{
-			state:"000",
+			status:"000",
 			body:"",
 		},
 	}
 }
 
-func (r *Request) Send() (string, string, error) {
+func (r *Request) Send() error {
 	//Check Method
 	if r.method == "" {
-		return "", "", errors.New("Missing Method")
+		return errors.New("Missing Method")
 	} 
 	
 	//Check URL
 	if r.url == "" {
-		return "", "", errors.New("Missing URL")
+		return errors.New("Missing URL")
 	}	
 	if !isURL(r.url) {
-		return "", "", errors.New("Invalid URL")
+		return errors.New("Invalid URL")
 	}
-	if r.url[0:8] != "https://" && r.url[0:7] != "http://" {
+	if len(r.url) < 7 || (r.url[0:8] != "https://" && r.url[0:7] != "http://") {
+		log.Println("Missing http schema")
 		if r.secure {
 			r.url = "https://" + r.url
 		} else {
@@ -49,8 +52,7 @@ func (r *Request) Send() (string, string, error) {
 		}
 	}
 	
-	
 	//Send Req
-	status, response := httpReq(r.method, r.url, r.fields, r.headers)
-	return status, response, nil
+	r.response.status, r.response.body = httpReq(r.method, r.url, r.fields, r.headers)
+	return nil
 }
